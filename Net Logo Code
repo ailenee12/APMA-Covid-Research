@@ -1,0 +1,119 @@
+turtles-own
+  [ sick?                ;; if true, the turtle is infectious
+    sick-time            ;; how long, in weeks, the turtle has been infectious
+    immune?              ;; reports if the turtle has had the infection before and is immune
+  ]
+
+globals
+  [ %infected            ;; what % of the population is infectious
+    %recovered           ;; what % of the population is recovered
+    carrying-capacity    ;; the number of turtles that can be in the world at one time
+  ]
+
+;; The setup is divided into four procedures
+to setup
+  clear-all
+  setup-constants
+  setup-turtles
+  update-global-variables
+  update-display
+  reset-ticks
+end
+
+;; We create a variable number of turtles of which 10 are infectious,
+;; and distribute them randomly
+to setup-turtles
+  create-turtles number-people
+    [ setxy random-xcor random-ycor
+      set sick-time 0
+      set immune? false
+      set size 1.5  ;; easier to see
+      get-healthy ]
+  ask n-of 10 turtles
+    [ get-sick ]
+end
+
+to get-sick ;; turtle procedure
+  set sick? true
+end
+
+to get-healthy ;; turtle procedure
+  set sick? false
+  set sick-time 0
+end
+
+to become-recovered ;; turtle procedure
+  set sick? false
+  set immune? true
+end
+
+;; This sets up basic constants of the model.
+to setup-constants
+  set carrying-capacity 300
+end
+
+to go
+  ask turtles [
+    live-life
+    move
+    if sick? [ recover ]
+    if sick? [ infect ]
+  ]
+  update-global-variables
+  update-display
+  tick
+end
+
+to update-global-variables
+  if count turtles > 0
+    [ set %infected (count turtles with [ sick? ] / count turtles) * 100
+      set %recovered (count turtles with [ recovered? ] / count turtles) * 100 ]
+end
+
+to update-display
+  ask turtles
+    [ if shape != turtle-shape [ set shape turtle-shape ]
+      set color ifelse-value sick? [ red ] [ ifelse-value recovered? [ grey ] [ green ] ] ]
+end
+
+;;Turtle counting variables are advanced.
+to live-life ;; turtle procedure
+  if sick? [ set sick-time sick-time + 1 ]
+end
+
+;; Turtles move about at random.
+to move ;; turtle procedure
+  rt random 100
+  lt random 100
+  fd 1
+end
+
+;; If a turtle is sick, it infects other turtles on the same patch.
+;; recovered turtles don't get sick.
+to infect ;; turtle procedure
+  ask other turtles-on neighbors [ if not sick? and not immune? 
+    [ if random-float 100 < infectiousness
+      [ get-sick ] ] ]
+  
+end
+
+;; Once the turtle has been sick long enough, it
+;; either recovers (and becomes recovered) or it dies.
+to recover;; turtle procedure
+  if sick-time > duration                        ;; If the turtle has survived past the virus' duration
+      [ become-recovered ]
+end
+
+
+to-report recovered?
+  if immune? [report true]
+  report sick-time > duration
+end
+
+to startup
+  setup-constants ;; so that carrying-capacity can be used as upper bound of number-people slider
+end
+
+
+; Copyright 1998 Uri Wilensky.
+; See Info tab for full copyright and license.
